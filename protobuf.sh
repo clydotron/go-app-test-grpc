@@ -1,0 +1,1 @@
+protoc api/clusterpb/cluster.proto --go_out=plugins=grpc:.
