@@ -5,19 +5,33 @@ import (
 	"log"
 	"net"
 
-	"github.com/clydotron/go-app-test/api/clusterpb"
+	"github.com/clydotron/go-app-test-grpc/api/clusterpb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-type clusterServer struct{}
+type clusterServer struct {
+	counter int
+}
 
 func (cs *clusterServer) HealthCheck(req *clusterpb.HealthCheckRequest, stream clusterpb.ClusterService_HealthCheckServer) error {
 
-	fmt.Println("HealthCheck:", req)
+	fmt.Println("HealthCheck:", req, "counter", cs.counter)
 
 	//@todo this includes a timeout/duration, implement a timer and pass
+
+	status := "idle"
+	errorMsg := "none"
+	if cs.counter < 2 {
+		status = "starting"
+	} else if cs.counter < 3 {
+		status = "running"
+	} else if cs.counter < 4 {
+		status = "stopped"
+		errorMsg = "crash!"
+	}
+	cs.counter++
 
 	// send info for each control plane
 	cplanes := req.ClusterInfo.GetControlPlaneNodes()
@@ -26,9 +40,9 @@ func (cs *clusterServer) HealthCheck(req *clusterpb.HealthCheckRequest, stream c
 		resp := &clusterpb.HealthCheckProgress{
 			Metadata: &clusterpb.Metadata{
 				Hostname: cplane,
-				Error:    "none",
+				Error:    errorMsg,
 			},
-			Message: "active",
+			Message: status,
 		}
 		stream.Send(resp)
 	}
@@ -63,6 +77,8 @@ func main() {
 	s := grpc.NewServer()
 
 	clusterpb.RegisterClusterServiceServer(s, &clusterServer{})
+
+	fmt.Println("gRPC server ACTIVE")
 
 	if err := s.Serve(lis); err != nil {
 		log.Fatalln("Failed to serve:", err)

@@ -6,23 +6,23 @@ import (
 	"io"
 	"log"
 
-	"github.com/clydotron/go-app-test/api/clusterpb"
-	"github.com/clydotron/go-app-test/client"
+	"github.com/clydotron/go-app-test-grpc/api/clusterpb"
+	"google.golang.org/grpc"
 )
 
 func main() {
 
-	cc := client.NewClusterClient()
+	//cc := client.NewClusterClient()
+	//defer cc.Close()
+	cc, err := grpc.Dial("localhost:50051", grpc.WithInsecure())
+	if err != nil {
+		log.Fatalln("Failed to dial:", err)
+	}
 	defer cc.Close()
-	// cc, err := grpc.Dial("localhost:50051", grpc.WithInsecure())
-	// if err != nil {
-	// 	log.Fatalln("Failed to dial:", err)
-	// }
-	// defer cc.Close()
 
-	// c := clusterpb.NewClusterServiceClient(cc)
+	c := clusterpb.NewClusterServiceClient(cc)
 
-	doHealthCheck(cc.CSC)
+	doHealthCheck(c)
 }
 
 func doHealthCheck(csc clusterpb.ClusterServiceClient) {
